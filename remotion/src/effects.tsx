@@ -79,22 +79,50 @@ const clean = (w: string) => w.toLowerCase().replace(/[.,!?;:"'“”…]/g, '')
 // keyword tô vàng.
 const WORDS_PER_PAGE = 24;   // ~5 hàng ở cỡ chữ + độ rộng bên dưới
 
-export const KaraokeCaption: React.FC<{text: string; keywords?: {text: string}[]}> = ({text, keywords}) => {
+export const KaraokeCaption: React.FC<{text: string; keywords?: {text: string}[]; wordTimings?: number[]}> = ({text, keywords, wordTimings}) => {
   const frame = useCurrentFrame();
-  const {durationInFrames} = useVideoConfig();
+  const {durationInFrames, fps} = useVideoConfig();
   const words = (text || '').trim().split(/\s+/).filter(Boolean);
   if (!words.length) return null;
   const kw = (keywords || []).flatMap((k) => clean(k.text).split(/\s+/));
 
   const pages: string[][] = [];
   for (let i = 0; i < words.length; i += WORDS_PER_PAGE) pages.push(words.slice(i, i + WORDS_PER_PAGE));
-  const prog = interpolate(frame, [0, durationInFrames], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-  const pIdx = Math.min(pages.length - 1, Math.floor(prog * pages.length));
+
+  // headGlobal = số từ đã ĐỌC (0..words.length). Ưu tiên MỐC THỜI GIAN THẬT của giọng
+  // (wordTimings) để tô chữ đúng lúc đọc; thiếu timings → nội suy tuyến tính (như cũ).
+  const useTimings = Array.isArray(wordTimings) && wordTimings.length === words.length;
+  let headGlobal: number;
+  if (useTimings) {
+    const t = frame / fps;
+    let k = 0;
+    while (k < wordTimings.length && wordTimings[k] <= t) k++;
+    if (k > 0 && k < wordTimings.length) {
+      const span = Math.max(0.001, wordTimings[k] - wordTimings[k - 1]);
+      headGlobal = (k - 1) + Math.min(1, (t - wordTimings[k - 1]) / span);   // chạy mượt trong từ
+    } else {
+      headGlobal = k;
+    }
+  } else {
+    headGlobal = interpolate(frame, [0, durationInFrames], [0, 1],
+      {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}) * words.length;
+  }
+
+  const curWordIdx = Math.min(words.length - 1, Math.floor(headGlobal));
+  const pIdx = Math.min(pages.length - 1, Math.floor(curWordIdx / WORDS_PER_PAGE));
   const cur = pages[pIdx];
-  const per = durationInFrames / pages.length;
-  const local = frame - pIdx * per;
-  const head = Math.min(1, local / per) * cur.length;   // vị trí từ đang đọc trong trang
-  const appear = interpolate(local, [0, 8], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const head = headGlobal - pIdx * WORDS_PER_PAGE;   // vị trí từ đang đọc TRONG trang
+
+  let appear: number;
+  if (useTimings) {
+    const pageStartT = wordTimings[pIdx * WORDS_PER_PAGE] ?? 0;
+    appear = interpolate(frame / fps, [pageStartT, pageStartT + 0.25], [0, 1],
+      {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  } else {
+    const per = durationInFrames / pages.length;
+    appear = interpolate(frame - pIdx * per, [0, 8], [0, 1],
+      {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  }
 
   return (
     <AbsoluteFill style={{alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 84, paddingRight: '44%'}}>

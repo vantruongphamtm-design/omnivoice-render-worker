@@ -15,6 +15,7 @@ export type StoryScene = {
   intensity?: number;
   keywords?: {text: string; importance?: number; effect?: string}[];
   audioUrl?: string | null;
+  wordTimings?: number[];   // mốc giây bắt đầu mỗi từ (căn theo audio thật) → karaoke khớp giọng
   durationInFrames: number;
 };
 
@@ -53,7 +54,7 @@ const SceneView: React.FC<{scene: StoryScene}> = ({scene}) => {
         : <GradientBg grade={grade} />}
       <Vignette strength={eff.vignette} />
       {base.flash ? <FlashHit atFrame={2} /> : null}
-      {scene.text ? <KaraokeCaption text={scene.text} keywords={scene.keywords} /> : null}
+      {scene.text ? <KaraokeCaption text={scene.text} keywords={scene.keywords} wordTimings={scene.wordTimings} /> : null}
       {scene.audioUrl ? <Waveform src={scene.audioUrl} /> : null}
       {scene.audioUrl ? <Audio src={scene.audioUrl} /> : null}
     </AbsoluteFill>
