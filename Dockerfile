@@ -1,56 +1,47 @@
 # OmniStudio — RunPod Serverless GPU worker: render 1 segment Remotion "StoryVideo".
-# Base = ảnh RunPod (CUDA 12.8, có sẵn python3+pip, đã chứng minh build/chạy trên RunPod GPU).
-FROM runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404
+# Base = node:20-bookworm (chính là base GPU CHÍNH THỨC của Remotion). KHÔNG dùng CUDA/torch:
+# render dùng GPU qua ANGLE/EGL do nvidia-container-runtime bơm vào → KHÔNG có ràng buộc
+# cuda>=X.Y nên chạy được trên MỌI host GPU của RunPod (tránh lỗi "unsatisfied condition: cuda>=12.8").
+FROM node:20-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 # Cho headless Chrome dùng GPU qua nvidia runtime (RunPod tự gắn GPU vào worker)
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 ENV NVIDIA_VISIBLE_DEVICES=all
-# GL renderer + chrome mode mặc định — đổi qua ENV của endpoint mà KHÔNG cần build lại
+# GL renderer + chrome mode mặc định — đổi qua ENV endpoint mà KHÔNG cần build lại
 ENV REMOTION_GL=angle-egl
 ENV REMOTION_CHROME_MODE=chrome-for-testing
 
-# --- Node 20 ---
-RUN apt-get update && apt-get install -y --no-install-recommends curl gnupg ca-certificates && \
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
-    rm -rf /var/lib/apt/lists/*
-
-# --- ffmpeg + phụ thuộc Chrome + font tiếng Việt + loader GL/Vulkan ---
-# Ubuntu 24.04: vài gói đổi hậu tố t64 → thử t64 trước, fallback tên cũ (không làm hỏng build).
+# Python3 (chạy handler runpod) + ffmpeg + phụ thuộc Chrome (Debian bookworm: tên gói GỐC,
+# không t64) + font tiếng Việt + loader GL/Vulkan cho ANGLE.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 python3-pip \
       ffmpeg fontconfig \
       fonts-noto-core fonts-noto-cjk fonts-liberation fonts-dejavu-core \
       libnss3 libdbus-1-3 libxrandr2 libxfixes3 libxcomposite1 libxdamage1 \
       libxkbcommon0 libpango-1.0-0 libcairo2 libgbm1 libglib2.0-0 \
-      libgl1 libegl1 libgles2 libglx0 libvulkan1 libxi6 libxtst6 libxrender1 && \
-    ( apt-get install -y --no-install-recommends libasound2t64 || apt-get install -y --no-install-recommends libasound2 ) && \
-    ( apt-get install -y --no-install-recommends libatk1.0-0t64 || apt-get install -y --no-install-recommends libatk1.0-0 ) && \
-    ( apt-get install -y --no-install-recommends libatk-bridge2.0-0t64 || apt-get install -y --no-install-recommends libatk-bridge2.0-0 ) && \
-    ( apt-get install -y --no-install-recommends libcups2t64 || apt-get install -y --no-install-recommends libcups2 ) && \
+      libgl1 libegl1 libgles2 libglx0 libvulkan1 libxi6 libxtst6 libxrender1 \
+      libasound2 libatk1.0-0 libatk-bridge2.0-0 libcups2 && \
     fc-cache -f && \
     rm -rf /var/lib/apt/lists/*
 
-# --- RunPod SDK (handler Python) ---
-# cryptography do apt cài (no RECORD) → cài lại bằng pip trước để tránh lỗi uninstall.
-RUN pip install --no-cache-dir --ignore-installed cryptography && \
-    pip install --no-cache-dir "runpod>=1.6.0"
+# RunPod SDK cho handler Python (Debian PEP 668 → cần --break-system-packages)
+RUN pip3 install --no-cache-dir --break-system-packages "runpod>=1.6.0"
 
 WORKDIR /app/remotion
 
-# Node deps của project + gói render API (tách lớp để cache theo lock)
+# Node deps của project + gói render API (tách lớp để cache theo lock). Node đã có sẵn trong base.
 COPY remotion/package.json remotion/package-lock.json ./
 RUN npm ci && npm i @remotion/renderer@4.0.504 @remotion/bundler@4.0.504
 
 # Toàn bộ source Remotion (node_modules bị .dockerignore loại)
 COPY remotion/ ./
 
-# Chrome for Testing (bắt buộc để GPU trên Linux) + headless-shell (fallback CPU).
-# Lỗi tải CfT không làm hỏng build (process.exit(0)) — khi đó handler tự fallback swangle/CPU.
+# Chrome for Testing (để GPU trên Linux) + headless-shell (fallback CPU). Lỗi tải không làm hỏng build.
 RUN node -e "require('@remotion/renderer').ensureBrowser({chromeMode:'chrome-for-testing'}).then(()=>console.log('CfT ok')).catch(e=>{console.error('CfT fail:',e&&e.message);process.exit(0)})" && \
     node -e "require('@remotion/renderer').ensureBrowser().then(()=>console.log('shell ok')).catch(e=>{console.error('shell fail:',e&&e.message);process.exit(0)})"
 
-# Scripts + BUNDLE sẵn site lúc build → cold render bỏ qua bundling (nhanh hơn)
+# Scripts + BUNDLE sẵn site lúc build → cold render bỏ qua bundling
 COPY render.mjs bundle.mjs ./
 RUN node bundle.mjs
 

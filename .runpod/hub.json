@@ -6,7 +6,7 @@
   "iconUrl": "",
   "config": {
     "runsOn": "GPU",
-    "cudaVersion": "12.8",
+    "cudaVersion": "12.0",
     "gpuCount": 1,
     "gpuIds": "ADA_24,AMPERE_24,AMPERE_16",
     "containerDiskInGb": 20,
