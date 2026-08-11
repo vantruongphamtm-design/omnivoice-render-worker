@@ -9,7 +9,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 ENV NVIDIA_VISIBLE_DEVICES=all
 # GL renderer + chrome mode mặc định — đổi qua ENV endpoint mà KHÔNG cần build lại
-ENV REMOTION_GL=angle-egl
+ENV REMOTION_GL=vulkan
 ENV REMOTION_CHROME_MODE=chrome-for-testing
 
 # Python3 (chạy handler runpod) + ffmpeg + phụ thuộc Chrome (Debian bookworm: tên gói GỐC,

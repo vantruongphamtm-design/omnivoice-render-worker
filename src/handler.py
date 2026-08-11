@@ -37,7 +37,7 @@ PUT_RETRIES = 3
 
 # Fallback CPU khi GPU (angle-egl + chrome-for-testing) lỗi: swangle = software GL của
 # Remotion, chạy với headless-shell → luôn render được (chậm hơn nhưng chắc chắn ra video).
-GL_DEFAULT = os.environ.get("REMOTION_GL", "angle-egl")
+GL_DEFAULT = os.environ.get("REMOTION_GL", "vulkan")   # vulkan chạy ổn định trên mọi worker RunPod
 CHROME_DEFAULT = os.environ.get("REMOTION_CHROME_MODE", "chrome-for-testing")
 GL_FALLBACK = "swangle"
 CHROME_FALLBACK = "headless-shell"

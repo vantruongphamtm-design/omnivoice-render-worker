@@ -15,7 +15,7 @@ if (!propsPath || !outPath) {
 
 const inputProps = JSON.parse(fs.readFileSync(propsPath, 'utf-8'));
 const serveUrl = path.resolve(process.env.REMOTION_BUNDLE || '/app/remotion/bundle');
-const gl = process.env.REMOTION_GL || 'angle-egl';
+const gl = process.env.REMOTION_GL || 'vulkan'; // vulkan ổn định + nhanh trên MỌI worker RunPod (angle-egl chỉ ~50% máy)
 const chromeMode = process.env.REMOTION_CHROME_MODE || 'chrome-for-testing';
 // Cap concurrency: RunPod báo full vCPU của HOST (32+) nhưng container bị giới hạn →
 // nếu để = cores, Remotion mở pool = min(cores, frames) tab Chrome → overcommit /dev/shm
