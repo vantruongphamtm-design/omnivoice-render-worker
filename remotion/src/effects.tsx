@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Img, useCurrentFrame, useVideoConfig, interpolate} from 'remotion';
 import {useAudioData, visualizeAudio} from '@remotion/media-utils';
 import {CAMERA, CameraKind} from './presets';
+import {NOISE_URI} from './noise';
 
 // Ảnh + chuyển động camera (zoom+pan) + pseudo-parallax (nền mờ + lớp nét) + rung.
 export const CameraImage: React.FC<{
@@ -25,23 +26,22 @@ export const CameraImage: React.FC<{
   );
 };
 
-// Film grain động (feTurbulence đổi seed mỗi frame) — phủ toàn video, blend overlay.
+// Film grain động — TILE texture noise tĩnh (data-URI) + dời vị trí mỗi 2 khung.
+// Thay feTurbulence (SVG filter rất nặng, tính lại toàn khung mỗi frame) → render nhanh hơn
+// nhiều lần (đặc biệt khi worker fallback CPU), nhìn vẫn như grain phim.
 export const FilmGrain: React.FC<{opacity: number}> = ({opacity}) => {
   const frame = useCurrentFrame();
   if (opacity <= 0) return null;
-  // Đổi seed mỗi 3 khung + numOctaves=1 → feTurbulence tính lại ít hơn (nhanh hơn nhiều khi render).
-  const seed = (Math.floor(frame / 3) % 60) + 1;
-  const id = `grain${seed}`;
+  const step = Math.floor(frame / 2);
+  const ox = (step * 47) % 128;   // dời tất-định → grain "nhấp nháy" động
+  const oy = (step * 89) % 128;
   return (
-    <AbsoluteFill style={{opacity, mixBlendMode: 'overlay', pointerEvents: 'none'}}>
-      <svg width="100%" height="100%">
-        <filter id={id}>
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves={1} seed={seed} stitchTiles="stitch" />
-          <feColorMatrix type="saturate" values="0" />
-        </filter>
-        <rect width="100%" height="100%" filter={`url(#${id})`} />
-      </svg>
-    </AbsoluteFill>
+    <AbsoluteFill style={{
+      opacity, mixBlendMode: 'overlay', pointerEvents: 'none',
+      backgroundImage: `url(${NOISE_URI})`,
+      backgroundRepeat: 'repeat',
+      backgroundPosition: `${ox}px ${oy}px`,
+    }} />
   );
 };
 
