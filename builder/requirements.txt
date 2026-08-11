@@ -1,0 +1,3 @@
+# RunPod render worker — chỉ cần SDK RunPod.
+# urllib (HTTP-PUT lên S3), json, subprocess, os, time đều là thư viện chuẩn của Python.
+runpod>=1.6.0

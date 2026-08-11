@@ -1,0 +1,24 @@
+{
+  "title": "Sample Story",
+  "bgmUrl": null,
+  "scenes": [
+    {
+      "text": "This is placeholder preview content. Real props are provided at render time via inputProps.",
+      "imageUrl": null,
+      "preset": "calm",
+      "intensity": 0.3,
+      "keywords": [{ "text": "placeholder" }],
+      "audioUrl": null,
+      "durationInFrames": 90
+    },
+    {
+      "text": "The worker renders whatever scenes the app sends in the job input.",
+      "imageUrl": null,
+      "preset": "reveal",
+      "intensity": 0.4,
+      "keywords": [{ "text": "render time" }],
+      "audioUrl": null,
+      "durationInFrames": 90
+    }
+  ]
+}

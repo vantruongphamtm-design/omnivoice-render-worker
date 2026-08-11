@@ -1,0 +1,10 @@
+# Không đưa node_modules/bundle/out từ máy dev vào build context (RunPod tự cài trong image)
+remotion/node_modules
+remotion/bundle
+remotion/out
+remotion/.remotion
+**/__pycache__
+**/*.pyc
+.git
+.gitignore
+*.log

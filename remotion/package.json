@@ -1,0 +1,30 @@
+{
+  "name": "omnistudio-remotion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Render video thuyết trình (slide + audio, không ảnh AI) bằng Remotion Lambda trên AWS",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render Presentation out/video.mp4",
+    "lambda:policy": "remotion lambda policies user",
+    "lambda:functions": "remotion lambda functions ls",
+    "lambda:sites": "remotion lambda sites create src/index.ts --site-name=omnistudio",
+    "lambda:render": "remotion lambda render omnistudio Presentation"
+  },
+  "dependencies": {
+    "@remotion/captions": "^4.0.504",
+    "@remotion/cli": "4.0.504",
+    "@remotion/lambda": "4.0.504",
+    "@remotion/media-utils": "^4.0.504",
+    "@remotion/noise": "^4.0.504",
+    "@remotion/transitions": "^4.0.504",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.504"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "typescript": "5.5.4"
+  }
+}

@@ -1,0 +1,7 @@
+remotion/node_modules/
+remotion/bundle/
+remotion/out/
+remotion/.remotion/
+__pycache__/
+*.pyc
+*.log

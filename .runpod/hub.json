@@ -1,0 +1,15 @@
+{
+  "title": "OmniStudio Remotion Renderer",
+  "description": "Render 1 segment của composition Remotion \"StoryVideo\" (4.0.504, React 19) bằng GPU rồi HTTP-PUT mp4 lên presigned S3 URL. Không cần AWS creds trong worker.",
+  "type": "serverless",
+  "category": "video",
+  "iconUrl": "",
+  "config": {
+    "runsOn": "GPU",
+    "cudaVersion": "12.8",
+    "gpuCount": 1,
+    "gpuIds": "ADA_24,AMPERE_24,AMPERE_16",
+    "containerDiskInGb": 20,
+    "env": []
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "title": "Cây Khế",
+  "bgmUrl": null,
+  "scenes": [
+    {
+      "layout": "title",
+      "title": "Cây Khế",
+      "subtitle": "Một câu chuyện cổ tích Việt Nam",
+      "durationInFrames": 120
+    },
+    {
+      "layout": "story",
+      "subtitle": "Ngày xưa",
+      "title": "Ngày xưa, có hai anh em nhà kia cha mẹ mất sớm, để lại một mảnh vườn và một cây khế ngọt.",
+      "durationInFrames": 180
+    },
+    {
+      "layout": "story",
+      "subtitle": "Chia gia tài",
+      "title": "Người anh tham lam chiếm hết ruộng vườn, chỉ chia cho em túp lều nhỏ và cây khế ở góc vườn.",
+      "durationInFrames": 180
+    },
+    {
+      "layout": "story",
+      "subtitle": "Chim thần",
+      "title": "Một hôm, có con chim lạ đến ăn khế và hứa: Ăn một quả, trả một cục vàng. May túi ba gang, mang đi mà đựng.",
+      "durationInFrames": 210
+    },
+    {
+      "layout": "quote",
+      "quote": "Ở hiền gặp lành, tham thì thâm.",
+      "author": "Bài học",
+      "durationInFrames": 120
+    }
+  ]
+}
