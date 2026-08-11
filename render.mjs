@@ -17,7 +17,14 @@ const inputProps = JSON.parse(fs.readFileSync(propsPath, 'utf-8'));
 const serveUrl = path.resolve(process.env.REMOTION_BUNDLE || '/app/remotion/bundle');
 const gl = process.env.REMOTION_GL || 'angle-egl';
 const chromeMode = process.env.REMOTION_CHROME_MODE || 'chrome-for-testing';
-const concurrency = Math.max(1, os.cpus().length); // đa luồng tối đa số nhân CPU
+// Cap concurrency: RunPod báo full vCPU của HOST (32+) nhưng container bị giới hạn →
+// nếu để = cores, Remotion mở pool = min(cores, frames) tab Chrome → overcommit /dev/shm
+// → Chrome crash ("got no response"). Đã song song across 5 worker nên mỗi worker chỉ
+// cần vài luồng. Chỉnh qua ENV REMOTION_CONCURRENCY, KHÔNG cần build lại image.
+const concurrency = Math.max(
+  1,
+  parseInt(process.env.REMOTION_CONCURRENCY || '', 10) || Math.min(os.cpus().length, 4),
+);
 
 const log = (...a) => console.log('[render]', ...a);
 log(`gl=${gl} chromeMode=${chromeMode} concurrency=${concurrency} scenes=${(inputProps.scenes || []).length}`);
