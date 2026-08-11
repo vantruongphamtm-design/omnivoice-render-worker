@@ -137,8 +137,9 @@ def handler(job):
 
     if not isinstance(props, dict):
         return {"error": "thiếu 'props' (object) trong input"}
-    if not put_url or not isinstance(put_url, str):
-        return {"error": "thiếu 'put_url' (presigned S3 PUT) trong input"}
+    # put_url TUỲ CHỌN: có → PUT mp4 lên S3; không → chỉ render (dùng cho test Hub).
+    if put_url is not None and not isinstance(put_url, str):
+        return {"error": "'put_url' phải là chuỗi presigned S3 PUT"}
 
     try:
         with open(PROPS_PATH, "w", encoding="utf-8") as f:
@@ -158,8 +159,11 @@ def handler(job):
             raise RuntimeError("render.mjs thất bại cả GPU lẫn CPU fallback")
 
         size = os.path.getsize(OUT_PATH)
-        _put_file(OUT_PATH, put_url)
-        return {"ok": True, "bytes": size}
+        if put_url:
+            _put_file(OUT_PATH, put_url)
+            return {"ok": True, "bytes": size, "uploaded": True}
+        # Không có put_url (test) → render xong là đạt, bỏ qua upload.
+        return {"ok": True, "bytes": size, "uploaded": False}
 
     except Exception as e:
         return {"error": str(e), "log": (render_log or "")[-1500:]}
