@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Audio, useCurrentFrame, useVideoConfig, interpolate} from 'remotion';
+import {AbsoluteFill, Audio, OffthreadVideo, useCurrentFrame, useVideoConfig, interpolate} from 'remotion';
 import {TransitionSeries, linearTiming} from '@remotion/transitions';
 import {CameraImage, FilmGrain, Vignette, FlashHit, KaraokeCaption, Waveform} from './effects';
 import {getPreset, applyIntensity, MOOD_GRADE, CameraKind, Mood, TransitionKind} from './presets';
@@ -8,6 +8,7 @@ import {pickTransition, transitionFrames} from './transitions';
 export type StoryScene = {
   text?: string;
   imageUrl?: string | null;
+  videoUrl?: string | null;   // clip video Pexels làm nền (ưu tiên hơn imageUrl)
   preset?: string;
   camera?: CameraKind;
   mood?: Mood;
@@ -49,7 +50,12 @@ const SceneView: React.FC<{scene: StoryScene}> = ({scene}) => {
   const grade = MOOD_GRADE[mood];
   return (
     <AbsoluteFill>
-      {scene.imageUrl
+      {scene.videoUrl
+        ? <AbsoluteFill style={{filter: grade === 'none' ? undefined : grade}}>
+            <OffthreadVideo src={scene.videoUrl} muted loop
+              style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+          </AbsoluteFill>
+        : scene.imageUrl
         ? <CameraImage image={scene.imageUrl} camera={camera} grade={grade} shake={eff.shake} />
         : <GradientBg grade={grade} />}
       <Vignette strength={eff.vignette} />
