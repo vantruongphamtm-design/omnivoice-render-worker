@@ -18,6 +18,7 @@ import re
 import json
 import math
 import shutil
+import threading
 import subprocess
 import urllib.request
 
@@ -85,7 +86,29 @@ def encoder_args():
     if _ENC == "nvenc":
         return ["-c:v", "h264_nvenc", "-preset", "p4", "-rc", "vbr", "-cq", "21", "-b:v", "0",
                 "-pix_fmt", "yuv420p"]
-    return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p"]
+    return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
+            "-threads", os.environ.get("FFMPEG_X264_THREADS", "4")]
+
+
+# GeForce (GTX 1080…) giới hạn ~3-5 phiên NVENC cùng lúc → cửa xoay: hết slot thì dùng x264,
+# máy nhiều nhân (Xeon 56 luồng) chạy song song NVENC + x264 cùng lúc = nhanh nhất.
+_NV_SEM = threading.BoundedSemaphore(int(os.environ.get("NVENC_SESSIONS", "4")))
+
+
+def encoder_slot():
+    """Trả (args, release_fn). NVENC nếu probe OK và còn slot; hết slot/không có → x264."""
+    encoder_args()                          # đảm bảo đã probe
+    if _ENC == "nvenc" and _NV_SEM.acquire(blocking=False):
+        released = {"v": False}
+
+        def _rel():
+            if not released["v"]:
+                released["v"] = True
+                _NV_SEM.release()
+        return (["-c:v", "h264_nvenc", "-preset", "p4", "-rc", "vbr", "-cq", "21", "-b:v", "0",
+                 "-pix_fmt", "yuv420p"], _rel)
+    return (["-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
+             "-threads", os.environ.get("FFMPEG_X264_THREADS", "4")], lambda: None)
 
 
 # ============================ CAMERA (zoompan) ============================
@@ -314,11 +337,25 @@ def render_scene(scene, wav_path, bg_local, out_path, prev_still=None, workdir=N
         vmap = "[vt]"
     fc += f";[{a_in}:a]aresample=44100,apad,atrim=0:{dur:.3f}[a]"
 
-    args += ["-filter_complex", fc, "-map", vmap, "-map", "[a]",
-             "-t", f"{dur:.3f}", "-r", str(FPS)] + (enc or encoder_args()) + \
-            ["-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-movflags", "+faststart", out_path]
-    r = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                       timeout=1200)
+    base = args + ["-filter_complex", fc, "-map", vmap, "-map", "[a]",
+                   "-t", f"{dur:.3f}", "-r", str(FPS)]
+    tail = ["-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-movflags", "+faststart", out_path]
+    if enc is not None:
+        vargs, rel = enc, (lambda: None)
+    else:
+        vargs, rel = encoder_slot()         # NVENC nếu còn slot, else x264
+    try:
+        r = subprocess.run(base + vargs + tail, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=1200)
+    finally:
+        rel()
+    if (r.returncode != 0 or not os.path.exists(out_path) or os.path.getsize(out_path) == 0) \
+            and "nvenc" in " ".join(vargs):
+        # NVENC hết session/lỗi driver giữa chừng → thử lại bằng x264 (tự chữa)
+        x264 = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
+                "-threads", os.environ.get("FFMPEG_X264_THREADS", "4")]
+        r = subprocess.run(base + x264 + tail, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=1200)
     if r.returncode != 0 or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
         raise RuntimeError("ffmpeg cảnh lỗi: " + (r.stderr or "")[-400:])
     return out_path
