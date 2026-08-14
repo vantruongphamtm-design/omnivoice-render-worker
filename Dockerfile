@@ -45,7 +45,8 @@ RUN node -e "require('@remotion/renderer').ensureBrowser({chromeMode:'chrome-for
 COPY render.mjs bundle.mjs ./
 RUN node bundle.mjs
 
-# Handler RunPod
+# Handler RunPod + engine ffmpeg (mode:"ffmpeg" — render cảnh nhanh 10-40x, NVENC nếu có)
 COPY src/handler.py /app/handler.py
+COPY src/ffmpeg_engine.py /app/ffmpeg_engine.py
 WORKDIR /app
 CMD ["python3", "-u", "/app/handler.py"]

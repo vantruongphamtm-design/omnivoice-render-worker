@@ -128,8 +128,49 @@ def _put_file(path, url):
     raise last_err if last_err else RuntimeError("S3 PUT thất bại")
 
 
+def _download(url, dest, timeout=300):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) "
+                                               "AppleWebKit/537.36 Chrome/126 Safari/537.36"})
+    with urllib.request.urlopen(req, timeout=timeout) as r, open(dest, "wb") as f:
+        while True:
+            chunk = r.read(1 << 16)
+            if not chunk:
+                break
+            f.write(chunk)
+    return dest
+
+
+def _ffmpeg_job(inp):
+    """MODE ffmpeg: render 1 CẢNH bằng engine ffmpeg (nhanh 10-40x Remotion).
+    Input: {mode:'ffmpeg', scene:{...}, ass:'<nội dung ASS dựng sẵn>', bg_url, wav_url,
+            prev_still_url?, put_url}. Encode NVENC nếu có, fallback libx264."""
+    import sys
+    sys.path.insert(0, "/app")
+    import ffmpeg_engine as FE
+    scene = inp.get("scene") or {}
+    put_url = inp.get("put_url")
+    try:
+        bg = _download(inp["bg_url"], "/tmp/bg" + (".mp4" if scene.get("videoUrl") else ".jpg"))
+        wav = _download(inp["wav_url"], "/tmp/voice.wav") if inp.get("wav_url") else None
+        still = _download(inp["prev_still_url"], "/tmp/prev.png") if inp.get("prev_still_url") else None
+        out = "/tmp/clip.mp4"
+        FE.render_scene(scene, wav, bg, out, prev_still=still, workdir="/tmp",
+                        ass_content=inp.get("ass"))
+        size = os.path.getsize(out)
+        if put_url:
+            _put_file(out, put_url)
+        return {"ok": True, "bytes": size, "engine": "ffmpeg"}
+    except Exception as e:
+        return {"error": str(e)[:800]}
+    finally:
+        for p in ("/tmp/bg.jpg", "/tmp/bg.mp4", "/tmp/voice.wav", "/tmp/prev.png", "/tmp/clip.mp4"):
+            _safe_remove(p)
+
+
 def handler(job):
     inp = job.get("input", {}) or {}
+    if inp.get("mode") == "ffmpeg":
+        return _ffmpeg_job(inp)
     props = inp.get("props")
     put_url = inp.get("put_url")
     gl = inp.get("gl")

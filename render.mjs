@@ -42,6 +42,8 @@ async function main() {
     chromeMode,
     chromiumOptions: {gl},
     timeoutInMilliseconds: 120000, // frame nặng → nới timeout delayRender
+    x264Preset: 'veryfast',        // cùng crf → chất lượng giữ nguyên, encode nhanh hơn hẳn
+    offthreadVideoCacheSizeInBytes: 1_500_000_000, // cache khung video nền (Pexels) → đỡ re-seek
   });
   log('OK', outPath);
 }
