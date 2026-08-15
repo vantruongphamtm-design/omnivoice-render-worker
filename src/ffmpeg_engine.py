@@ -169,13 +169,30 @@ def _clean(w):
     return re.sub(r"[^\wÀ-ỹ]", "", w, flags=re.UNICODE).lower()
 
 
+# Chữ viết KHÔNG dấu cách (Trung/Nhật/Thái/Lào/Miến/Khmer): token dài phải bẻ thành cụm nhỏ,
+# nếu không cả bài = 1 "từ" → phụ đề tràn màn hình.
+_NOSPACE_RE = re.compile(r'[一-鿿㐀-䶿぀-ヿ豈-﫿฀-๿຀-໿က-႟ក-៿]')
+
+
+def _tokens(text):
+    """Tách text thành 'từ' cho karaoke: có dấu cách → split thường; cụm CJK/Thái dài → cắt 2 ký tự."""
+    out = []
+    for t in (text or "").strip().split():
+        if len(t) > 4 and _NOSPACE_RE.search(t):
+            for i in range(0, len(t), 2):
+                out.append(t[i:i + 2])
+        else:
+            out.append(t)
+    return out
+
+
 WORDS_PER_PAGE = 24
 
 
 def build_ass(scene, amps, path):
     """ASS 2 style: Cap (karaoke \\kf, giữa-trái như KaraokeCaption) + Wave (32 thanh vẽ mỗi khung)."""
     dur = max(1, int(scene.get("durationInFrames") or 60)) / FPS
-    words = (scene.get("text") or "").strip().split()
+    words = _tokens(scene.get("text") or "")   # CJK/Thái: bẻ cụm 2 ký tự, tránh 1 'từ' khổng lồ
     wt = scene.get("wordTimings") or []
     if len(wt) != len(words) or not words:
         wt = [i * dur / max(1, len(words)) for i in range(len(words))]  # nội suy tuyến tính
